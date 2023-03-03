@@ -1,0 +1,107 @@
+<html>
+  <head>
+    <title>Shopping Manager</title>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script> 
+    <script>
+      $(document).ready(function() {
+        // AJAX call to fetch items from backend
+        $.ajax({
+          type: "GET",
+          url: "/getItems",
+          success: function(data) {
+            // Populate the list of items fetched
+            for (let i = 0; i < data.length; i++) {
+              let item = data[i];
+              let itemHtml = `<div class="card" style="width: 18rem;">
+                <div class="card-body">
+                  <h5 class="card-title">${item.name}</h5>
+                  <h6 class="card-subtitle mb-2 text-muted">${item.price}</h6>
+                  <a href="${item.link}" class="card-link">View</a>
+                  <a href="#" class="card-link">Comment</a>
+                </div>
+              </div>`;
+              $('#items-list').append(itemHtml);
+            }
+          }
+        });
+      });
+    </script>
+  </head>
+  <body>        
+    <py-script>
+from flask import Flask, request, jsonify
+from autoscraper import AutoScraper
+
+app = Flask(__name__)
+
+scraper = AutoScraper()
+
+def get_data_from_link(link):
+    # Define the scraping pattern using a list of data we want to extract
+    pattern = [
+        'Product Name',
+        'Product Price',
+        'Product Availability'
+    ]
+
+    # Use the scrape() method to generate the scraper and extract data from the link
+    data = scraper.build(link, pattern)
+
+    # Format the scraped data into a list of dictionaries
+    items = []
+    for i in range(len(data['Product Name'])):
+        item = {
+            'name': data['Product Name'][i],
+            'price': data['Product Price'][i],
+            'available': data['Product Availability'][i]
+        }
+        items.append(item)
+
+    return items
+
+@app.route('/')
+def index():
+    return app.send_static_file('index.html')
+
+@app.route('/script.js')
+def script():
+    return app.send_static_file('script.js')
+
+@app.route('/scrape')
+def scrape():
+    link = request.args.get('link')
+    items = get_data_from_link(link)
+    return jsonify(items)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+    </py-script>
+    <div class="container">
+      <h1>Shopping Manager</h1>
+      <div class="row">
+        <div class="col-md-6">
+          <form>
+            <div class="form-group">
+              <label for="item-name">Item Name</label>
+              <input type="text" class="form-control" id="item-name" placeholder="Enter item name">
+            </div>
+            <div class="form-group">
+              <label for="item-link">Item Link</label>
+              <input type="text" class="form-control" id="item-link" placeholder="Enter item link">
+            </div>
+            <button type="submit" class="btn btn-primary">Add Item</button>
+          </form>
+        </div>
+        <div class="col-md-6">
+          <div id="items-list">
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
